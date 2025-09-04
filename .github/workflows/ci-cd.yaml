@@ -86,7 +86,7 @@ jobs:
         continue-on-error: true
         
       - name: 📊 Upload security reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: security-reports
           path: |
@@ -143,7 +143,7 @@ jobs:
             -v
             
       - name: 📊 Upload test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results
@@ -286,7 +286,7 @@ jobs:
           files: rendered-manifests.yaml
           
       - name: 📊 Upload rendered manifests
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: helm-manifests
           path: rendered-manifests.yaml
