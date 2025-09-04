@@ -24,10 +24,11 @@ on:
         type: boolean
 
 env:
-  REGISTRY: docker.io
+  REGISTRY: 192.168.0.100:5000
   IMAGE_NAME: crypto-rates
   AWS_REGION: eu-central-1
   EKS_CLUSTER: devops-lab-cluster
+  LOCAL_RUNNER_IP: 192.168.0.100
 
 jobs:
   # ======================================
@@ -35,35 +36,48 @@ jobs:
   # ======================================
   code-quality:
     name: 🔍 Code Quality & Security
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: ${{ !github.event.inputs.skip_tests }}
     
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         
-      - name: 🐍 Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-          
-      - name: 📦 Install dependencies
+      - name: ⚡ Setup UV Package Manager
         run: |
-          pip install -r app/requirements.txt
-          pip install flake8 bandit safety pytest pytest-cov
+          # Install UV if not present
+          if ! command -v uv &> /dev/null; then
+            curl -LsSf https://astral.sh/uv/install.sh | sh
+            export PATH="$HOME/.local/bin:$PATH"
+          fi
+          
+          # Add UV to PATH for subsequent steps
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          
+      - name: 📦 Install dependencies with UV
+        run: |
+          cd app/
+          uv sync
+          
+          # Install additional dev tools via UV
+          uv add --dev flake8 bandit safety pytest pytest-cov
           
       - name: 🧹 Lint with flake8
         run: |
-          flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 app/ --count --max-complexity=10 --max-line-length=88 --statistics
+          cd app/
+          uv run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          uv run flake8 . --count --max-complexity=10 --max-line-length=88 --statistics
           
       - name: 🔒 Security scan with Bandit
-        run: bandit -r app/ -f json -o bandit-report.json
+        run: |
+          cd app/
+          uv run bandit -r . -f json -o bandit-report.json
         continue-on-error: true
         
       - name: 🛡️ Dependency vulnerability scan
-        run: safety check --json --output safety-report.json
+        run: |
+          cd app/
+          uv run safety check --json --output safety-report.json
         continue-on-error: true
         
       - name: 📊 Upload security reports
@@ -80,28 +94,37 @@ jobs:
   # ======================================
   unit-tests:
     name: 🧪 Unit Tests
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: ${{ !github.event.inputs.skip_tests }}
     
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         
-      - name: 🐍 Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-          
-      - name: 📦 Install dependencies
+      - name: ⚡ Setup UV Package Manager
         run: |
-          pip install -r app/requirements.txt
-          pip install pytest pytest-cov pytest-html requests-mock
+          # Install UV if not present
+          if ! command -v uv &> /dev/null; then
+            curl -LsSf https://astral.sh/uv/install.sh | sh
+            export PATH="$HOME/.local/bin:$PATH"
+          fi
+          
+          # Add UV to PATH for subsequent steps
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          
+      - name: 📦 Install dependencies with UV
+        run: |
+          cd app/
+          uv sync
+          
+          # Install test dependencies via UV
+          uv add --dev pytest pytest-cov pytest-html requests-mock
           
       - name: 🧪 Run tests with coverage
         run: |
-          python -m pytest app/ \
-            --cov=app \
+          cd app/
+          uv run pytest . \
+            --cov=. \
             --cov-report=xml:coverage.xml \
             --cov-report=html:htmlcov \
             --junit-xml=pytest-report.xml \
@@ -131,7 +154,7 @@ jobs:
   # ======================================
   build:
     name: 🏗️ Build & Package
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [code-quality, unit-tests]
     if: always() && (needs.code-quality.result == 'success' || needs.code-quality.result == 'skipped') && (needs.unit-tests.result == 'success' || needs.unit-tests.result == 'skipped')
     
@@ -202,7 +225,7 @@ jobs:
   # ======================================
   container-security:
     name: 🔒 Container Security Scan
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: build
     if: always() && needs.build.result == 'success'
     
@@ -225,7 +248,7 @@ jobs:
   # ======================================
   helm-validation:
     name: 📦 Helm Chart Validation
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: build
     
     steps:
@@ -264,7 +287,7 @@ jobs:
   # ======================================
   deploy:
     name: 🚢 Deploy to ${{ matrix.environment }}
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
@@ -355,7 +378,7 @@ jobs:
   # ======================================
   notify:
     name: 📢 Notifications
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: always()
     needs: [deploy]
     
