@@ -5,6 +5,7 @@ Unit tests for HeyCard Cryptocurrency Exchange Rates Application
 
 import json
 import pytest
+import requests
 import requests_mock
 from unittest.mock import patch
 from main import app, CryptoRatesAPI
@@ -69,7 +70,7 @@ class TestCryptoRatesAPI:
         """Test API timeout handling."""
         requests_mock.get(
             f"{self.api.base_url}/exchange_rates",
-            exc=requests_mock.exceptions.ConnectTimeout
+            exc=requests.exceptions.ConnectTimeout
         )
 
         result = self.api.get_exchange_rates()
@@ -88,19 +89,22 @@ class TestCryptoRatesAPI:
         result = self.api.get_exchange_rates()
         assert "error" in result
 
-    def test_caching_mechanism(self):
+    def test_caching_mechanism(self, requests_mock):
         """Test data caching functionality."""
-        with patch.object(self.api, 'get_exchange_rates') as mock_fetch:
-            mock_fetch.return_value = {"test": "data"}
+        # Mock the HTTP request
+        requests_mock.get(
+            f"{self.api.base_url}/exchange_rates",
+            json=self.sample_api_response
+        )
 
-            # First call should fetch fresh data
-            result1 = self.api.get_exchange_rates()
-            assert mock_fetch.call_count == 1
+        # First call should fetch fresh data
+        result1 = self.api.get_exchange_rates()
+        assert requests_mock.call_count == 1
 
-            # Second immediate call should use cache
-            result2 = self.api.get_exchange_rates()
-            assert mock_fetch.call_count == 1  # Still 1, not called again
-            assert result1 == result2
+        # Second immediate call should use cache
+        result2 = self.api.get_exchange_rates()
+        assert requests_mock.call_count == 1  # Still 1, not called again
+        assert result1 == result2
 
     def test_data_processing(self):
         """Test data processing and sorting."""
