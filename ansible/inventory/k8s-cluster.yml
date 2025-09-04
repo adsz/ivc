@@ -1,0 +1,38 @@
+---
+# Kubernetes Cluster Inventory for Registry Certificate Distribution
+# Enterprise DevOps - HeyCard Crypto Rates Project
+
+all:
+  children:
+    k8s_cluster:
+      children:
+        k8s_masters:
+          hosts:
+            k8s-master-1:
+              ansible_host: 192.168.0.180
+              ansible_user: ansible
+              ansible_ssh_private_key_file: ~/.ssh/id_rsa
+        k8s_workers:
+          hosts:
+            k8s-worker-1:
+              ansible_host: 192.168.0.190
+              ansible_user: ansible
+              ansible_ssh_private_key_file: ~/.ssh/id_rsa
+      vars:
+        # Registry configuration
+        registry_host: 192.168.0.100
+        registry_port: 5000
+        registry_fqdn: "{{ registry_host }}:{{ registry_port }}"
+        
+        # Certificate paths
+        local_cert_path: /opt/registry/certs/domain.crt
+        containerd_cert_dir: "/etc/containerd/certs.d/{{ registry_fqdn }}"
+        system_ca_dir: /etc/pki/ca-trust/source/anchors
+        
+        # Containerd configuration
+        containerd_service: containerd
+        
+        # Enterprise security settings
+        cert_owner: root
+        cert_group: root
+        cert_mode: '0644'

@@ -1,0 +1,190 @@
+# Default values for crypto-rates application
+# This is a YAML-formatted file.
+# Declare variables to be substituted into your templates.
+
+# Application settings
+app:
+  name: crypto-rates
+  version: "1.0.0"
+
+# Image configuration
+image:
+  repository: crypto-rates
+  tag: "latest"
+  pullPolicy: Always
+  # pullSecrets: []
+
+# Replica configuration
+replicaCount: 3
+
+# Rolling update strategy
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+    maxSurge: 1
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 5000
+  protocol: TCP
+  annotations: {}
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: crypto-rates.devops-lab.cloud
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: crypto-rates-tls
+      hosts:
+        - crypto-rates.devops-lab.cloud
+
+# Resource management
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Horizontal Pod Autoscaler
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+  allowPrivilegeEscalation: false
+
+# Environment variables
+env:
+  - name: FLASK_ENV
+    value: "production"
+  - name: PORT
+    value: "5000"
+  - name: WORKERS
+    value: "4"
+  - name: API_TIMEOUT
+    value: "10"
+  - name: CACHE_DURATION
+    value: "300"
+
+# ConfigMap data
+configMap:
+  create: true
+  data:
+    app.conf: |
+      # Application configuration
+      debug = false
+      testing = false
+      log_level = INFO
+
+# Secrets (if needed)
+secrets:
+  create: false
+  data: {}
+
+# Persistent Volume Claims
+persistence:
+  enabled: false
+  # storageClass: "gp2"
+  # accessMode: ReadWriteOnce
+  # size: 1Gi
+
+# Node selection
+nodeSelector: {}
+
+# Pod affinity
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - crypto-rates
+          topologyKey: kubernetes.io/hostname
+
+# Tolerations
+tolerations: []
+
+# Probes configuration
+probes:
+  liveness:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 3
+    path: /health
+  readiness:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    successThreshold: 1
+    failureThreshold: 3
+    path: /health
+
+# Monitoring
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    path: /metrics
+    labels: {}
+
+# Network policies
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 5000
+  egress:
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443  # HTTPS for CoinGecko API
+        - protocol: TCP
+          port: 53   # DNS
+        - protocol: UDP
+          port: 53   # DNS

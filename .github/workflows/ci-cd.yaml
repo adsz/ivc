@@ -1,0 +1,379 @@
+name: 🚀 HeyCard Crypto Rates CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+      skip_tests:
+        description: 'Skip tests'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: crypto-rates
+  AWS_REGION: eu-central-1
+  EKS_CLUSTER: devops-lab-cluster
+
+jobs:
+  # ======================================
+  # STATIC ANALYSIS & SECURITY
+  # ======================================
+  code-quality:
+    name: 🔍 Code Quality & Security
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.inputs.skip_tests }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          
+      - name: 📦 Install dependencies
+        run: |
+          pip install -r app/requirements.txt
+          pip install flake8 bandit safety pytest pytest-cov
+          
+      - name: 🧹 Lint with flake8
+        run: |
+          flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 app/ --count --max-complexity=10 --max-line-length=88 --statistics
+          
+      - name: 🔒 Security scan with Bandit
+        run: bandit -r app/ -f json -o bandit-report.json
+        continue-on-error: true
+        
+      - name: 🛡️ Dependency vulnerability scan
+        run: safety check --json --output safety-report.json
+        continue-on-error: true
+        
+      - name: 📊 Upload security reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            safety-report.json
+          retention-days: 30
+
+  # ======================================
+  # UNIT TESTS
+  # ======================================
+  unit-tests:
+    name: 🧪 Unit Tests
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.inputs.skip_tests }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          
+      - name: 📦 Install dependencies
+        run: |
+          pip install -r app/requirements.txt
+          pip install pytest pytest-cov pytest-html requests-mock
+          
+      - name: 🧪 Run tests with coverage
+        run: |
+          python -m pytest app/ \
+            --cov=app \
+            --cov-report=xml:coverage.xml \
+            --cov-report=html:htmlcov \
+            --junit-xml=pytest-report.xml \
+            --html=pytest-report.html \
+            --self-contained-html \
+            -v
+            
+      - name: 📊 Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results
+          path: |
+            pytest-report.html
+            coverage.xml
+            htmlcov/
+          retention-days: 30
+          
+      - name: 📈 Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+
+  # ======================================
+  # BUILD & PACKAGE
+  # ======================================
+  build:
+    name: 🏗️ Build & Package
+    runs-on: ubuntu-latest
+    needs: [code-quality, unit-tests]
+    if: always() && (needs.code-quality.result == 'success' || needs.code-quality.result == 'skipped') && (needs.unit-tests.result == 'success' || needs.unit-tests.result == 'skipped')
+    
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: 🔑 Login to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          
+      - name: 📝 Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value={{sha}},enable=true
+            type=raw,value={{date 'YYYYMMDD-HHmmss'}},enable=true
+            
+      - name: 🔒 Run Trivy vulnerability scanner (Dockerfile)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-dockerfile.sarif'
+          
+      - name: 📊 Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-dockerfile.sarif'
+          
+      - name: 🏗️ Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+            VCS_REF=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.revision'] }}
+            VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+
+  # ======================================
+  # SECURITY SCAN
+  # ======================================
+  container-security:
+    name: 🔒 Container Security Scan
+    runs-on: ubuntu-latest
+    needs: build
+    if: always() && needs.build.result == 'success'
+    
+    steps:
+      - name: 🔒 Run Trivy vulnerability scanner (Image)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ needs.build.outputs.image-tag }}
+          format: 'sarif'
+          output: 'trivy-image.sarif'
+          
+      - name: 📊 Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-image.sarif'
+
+  # ======================================
+  # HELM VALIDATION
+  # ======================================
+  helm-validation:
+    name: 📦 Helm Chart Validation
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: ⚙️ Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+          
+      - name: 🧹 Lint Helm chart
+        run: helm lint helm/crypto-rates/
+        
+      - name: 📋 Template Helm chart
+        run: |
+          helm template crypto-rates helm/crypto-rates/ \
+            --set image.tag=${{ github.sha }} \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --namespace development > rendered-manifests.yaml
+            
+      - name: ✅ Validate Kubernetes manifests
+        uses: instrumenta/kubeval-action@master
+        with:
+          files: rendered-manifests.yaml
+          
+      - name: 📊 Upload rendered manifests
+        uses: actions/upload-artifact@v3
+        with:
+          name: helm-manifests
+          path: rendered-manifests.yaml
+          retention-days: 30
+
+  # ======================================
+  # DEPLOYMENT
+  # ======================================
+  deploy:
+    name: 🚢 Deploy to ${{ matrix.environment }}
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/develop')
+    needs: [build, container-security, helm-validation]
+    
+    strategy:
+      matrix:
+        include:
+          - environment: development
+            condition: ${{ github.ref == 'refs/heads/develop' || github.event.inputs.environment == 'development' }}
+          - environment: staging
+            condition: ${{ github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging' }}
+          - environment: production
+            condition: ${{ startsWith(github.ref, 'refs/tags/') || github.event.inputs.environment == 'production' }}
+    
+    environment:
+      name: ${{ matrix.environment }}
+      url: https://crypto-rates-${{ matrix.environment }}.devops-lab.cloud
+      
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: ⚙️ Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          
+      - name: ⚙️ Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+          
+      - name: ⚙️ Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+          
+      - name: 🔗 Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER }}
+          
+      - name: 🏗️ Create namespace
+        run: |
+          kubectl create namespace ${{ matrix.environment }} --dry-run=client -o yaml | kubectl apply -f -
+          
+      - name: 🚀 Deploy with Helm
+        run: |
+          helm upgrade --install crypto-rates-${{ matrix.environment }} helm/crypto-rates/ \
+            --namespace ${{ matrix.environment }} \
+            --set image.tag=${{ github.sha }} \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set ingress.hosts[0].host=crypto-rates-${{ matrix.environment }}.devops-lab.cloud \
+            --values helm/crypto-rates/values-${{ matrix.environment }}.yaml \
+            --wait --timeout=10m
+            
+      - name: ✅ Verify deployment
+        run: |
+          kubectl rollout status deployment/crypto-rates-${{ matrix.environment }} \
+            -n ${{ matrix.environment }} --timeout=600s
+            
+      - name: 🧪 Run smoke tests
+        run: |
+          SERVICE_URL="https://crypto-rates-${{ matrix.environment }}.devops-lab.cloud"
+          
+          # Wait for service to be ready
+          for i in {1..30}; do
+            if curl -f $SERVICE_URL/health; then
+              echo "✅ Service is healthy"
+              break
+            fi
+            echo "Waiting for service... ($i/30)"
+            sleep 10
+          done
+          
+          # Test main endpoints
+          curl -f $SERVICE_URL/ > /dev/null
+          curl -f $SERVICE_URL/api/rates > /dev/null
+          curl -f $SERVICE_URL/metrics > /dev/null
+          
+          echo "✅ All smoke tests passed"
+
+  # ======================================
+  # NOTIFICATIONS
+  # ======================================
+  notify:
+    name: 📢 Notifications
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [deploy]
+    
+    steps:
+      - name: 🟢 Success notification
+        if: needs.deploy.result == 'success'
+        run: |
+          echo "🎉 Deployment completed successfully!"
+          # Add Slack/Teams notification here
+          
+      - name: 🔴 Failure notification
+        if: needs.deploy.result == 'failure'
+        run: |
+          echo "❌ Deployment failed!"
+          # Add Slack/Teams notification here
+          
+      - name: 🟡 Warning notification
+        if: needs.deploy.result == 'cancelled' || needs.deploy.result == 'skipped'
+        run: |
+          echo "⚠️ Deployment was cancelled or skipped!"
+          # Add Slack/Teams notification here

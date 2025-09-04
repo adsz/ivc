@@ -1,0 +1,143 @@
+---
+# Enterprise Docker Registry Certificate Distribution Playbook
+# Distributes TLS certificates to all Kubernetes nodes for secure registry access
+# 
+# Usage:
+#   ansible-playbook -i inventory/k8s-cluster.yml playbooks/deploy-registry-certificates.yml
+#
+# Author: DevOps Team <devops@heycard.com>
+# Project: HeyCard Crypto Rates - Enterprise DevOps Solution
+
+- name: "Configure Kubernetes Nodes for Secure Docker Registry Access"
+  hosts: k8s_cluster
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    playbook_version: "1.0.0"
+    deployment_timestamp: "{{ ansible_date_time.iso8601 }}"
+    
+  pre_tasks:
+    - name: "Display deployment information"
+      debug:
+        msg: |
+          ===============================================
+          Registry Certificate Distribution - v{{ playbook_version }}
+          ===============================================
+          Registry: {{ registry_fqdn }}
+          Target Hosts: {{ ansible_play_hosts | length }} nodes
+          Timestamp: {{ deployment_timestamp }}
+          User: {{ ansible_user }}
+          ===============================================
+    
+    - name: "Validate source certificate exists"
+      stat:
+        path: "{{ local_cert_path }}"
+      delegate_to: localhost
+      run_once: true
+      register: cert_stat
+      failed_when: not cert_stat.stat.exists
+      
+    - name: "Display certificate information"
+      debug:
+        msg: |
+          Certificate file: {{ local_cert_path }}
+          Size: {{ cert_stat.stat.size }} bytes
+          Certificate validated successfully
+
+  tasks:
+    - name: "Create containerd certificate directory"
+      file:
+        path: "{{ containerd_cert_dir }}"
+        state: directory
+        owner: "{{ cert_owner }}"
+        group: "{{ cert_group }}"
+        mode: '0755'
+      notify: restart_containerd
+      
+    - name: "Copy registry certificate for containerd"
+      copy:
+        src: "{{ local_cert_path }}"
+        dest: "{{ containerd_cert_dir }}/ca.crt"
+        owner: "{{ cert_owner }}"
+        group: "{{ cert_group }}"
+        mode: "{{ cert_mode }}"
+        backup: yes
+      notify: restart_containerd
+      register: containerd_cert_copy
+      
+    - name: "Create containerd hosts configuration"
+      template:
+        src: containerd-hosts.toml.j2
+        dest: "{{ containerd_cert_dir }}/hosts.toml"
+        owner: "{{ cert_owner }}"
+        group: "{{ cert_group }}"
+        mode: "{{ cert_mode }}"
+        backup: yes
+      notify: restart_containerd
+      register: containerd_hosts_config
+      
+    - name: "Add certificate to system CA trust store"
+      copy:
+        src: "{{ local_cert_path }}"
+        dest: "{{ system_ca_dir }}/docker-registry.crt"
+        owner: "{{ cert_owner }}"
+        group: "{{ cert_group }}"
+        mode: "{{ cert_mode }}"
+        backup: yes
+      notify: update_ca_trust
+      register: system_cert_copy
+      
+    - name: "Test registry connectivity (HTTP)"
+      uri:
+        url: "http://{{ registry_fqdn }}/v2/"
+        method: GET
+        status_code: [401, 403]  # Expected: authentication required
+        timeout: 10
+      register: http_test
+      ignore_errors: yes
+      
+    - name: "Test registry connectivity (HTTPS)"
+      uri:
+        url: "https://{{ registry_fqdn }}/v2/"
+        method: GET
+        status_code: [401, 403]  # Expected: authentication required
+        validate_certs: no  # We're testing with self-signed cert
+        timeout: 10
+      register: https_test
+      ignore_errors: yes
+
+  post_tasks:
+    - name: "Display deployment results"
+      debug:
+        msg: |
+          ===============================================
+          Certificate Deployment Results
+          ===============================================
+          Host: {{ inventory_hostname }} ({{ ansible_default_ipv4.address }})
+          Containerd cert: {{ 'Updated' if containerd_cert_copy.changed else 'No change' }}
+          Containerd config: {{ 'Updated' if containerd_hosts_config.changed else 'No change' }}
+          System CA: {{ 'Updated' if system_cert_copy.changed else 'No change' }}
+          Registry HTTP: {{ 'OK' if http_test.status == 401 else 'FAILED' }}
+          Registry HTTPS: {{ 'OK' if https_test.status == 401 else 'FAILED' }}
+          ===============================================
+          
+    - name: "Generate deployment report"
+      template:
+        src: deployment-report.md.j2
+        dest: "/tmp/registry-cert-deployment-{{ ansible_date_time.epoch }}.md"
+        mode: '0644'
+      delegate_to: localhost
+      run_once: true
+
+  handlers:
+    - name: restart_containerd
+      systemd:
+        name: "{{ containerd_service }}"
+        state: restarted
+        daemon_reload: yes
+      listen: "restart_containerd"
+      
+    - name: update_ca_trust
+      command: update-ca-trust
+      listen: "update_ca_trust"

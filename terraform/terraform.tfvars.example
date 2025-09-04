@@ -1,0 +1,69 @@
+# Example Terraform variables file for HeyCard Crypto Rates Infrastructure
+# Copy this file to terraform.tfvars and customize for your environment
+
+# Basic Configuration
+project_name = "crypto-rates"
+environment  = "development"  # development, staging, production
+owner        = "devops-team"
+
+# AWS Configuration
+aws_region  = "eu-central-1"
+aws_profile = "aws5"
+
+# EKS Configuration
+kubernetes_version = "1.28"
+key_pair_name     = "devops-lab-keypair"
+
+# Node Group Configuration (will be overridden by environment_config)
+node_instance_types     = ["t3.medium"]
+node_group_min_size     = 1
+node_group_max_size     = 5
+node_group_desired_size = 2
+node_disk_size          = 50
+
+# Application Configuration
+app_name     = "crypto-rates"
+app_version  = "1.0.0"
+docker_image = "docker.io/crypto-rates:latest"
+app_replicas = 2
+
+# Feature Flags
+enable_monitoring           = true
+enable_logging             = true
+enable_ingress_controller  = true
+enable_external_dns        = true
+enable_cluster_autoscaler  = true
+enable_cert_manager        = true
+enable_velero              = false
+enable_spot_instances      = false
+
+# Security Configuration
+enable_network_policy = true
+enable_rbac          = true
+
+# Domain Configuration
+domain_name       = "devops-lab.cloud"
+subdomain_prefix  = "crypto-rates"
+
+# Cost Optimization
+enable_spot_instances = false
+spot_instance_types   = ["t3.medium", "t3.large", "m5.large"]
+
+# Additional Tags
+additional_tags = {
+  Project     = "HeyCard eCommerce"
+  Team        = "DevOps"
+  CostCenter  = "Engineering"
+  Environment = "development"
+  Owner       = "devops-team@heycard.com"
+}
+
+# Advanced Configuration (optional)
+cluster_endpoint_private_access_cidrs = []
+
+# IAM Users/Roles mapping (optional)
+map_roles = []
+map_users = []
+
+# Environment-specific overrides are already defined in variables.tf
+# The system will automatically apply the correct configuration based on the environment variable

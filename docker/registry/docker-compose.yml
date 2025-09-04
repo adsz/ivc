@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  registry:
+    image: registry:2
+    container_name: crypto-rates-registry
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - registry-data:/var/lib/registry
+      - ./config:/etc/docker/registry:ro
+      - ./certs:/certs:ro
+      - ./auth:/auth:ro
+    environment:
+      REGISTRY_HTTP_TLS_CERTIFICATE: /certs/domain.crt
+      REGISTRY_HTTP_TLS_KEY: /certs/domain.key
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: "Registry Realm"
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
+      REGISTRY_HTTP_HEADERS_X-Content-Type-Options: "[nosniff]"
+      REGISTRY_HTTP_HEADERS_X-Frame-Options: "[DENY]"
+      REGISTRY_HTTP_HEADERS_X-Content-Type-Options: "[nosniff]"
+      REGISTRY_HTTP_HEADERS_Strict-Transport-Security: "[max-age=63072000; includeSubDomains; preload]"
+    networks:
+      - registry-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "https://localhost:5000/v2/", "--no-check-certificate"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  registry-ui:
+    image: joxit/docker-registry-ui:2.5.0
+    container_name: crypto-rates-registry-ui
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    environment:
+      SINGLE_REGISTRY: true
+      REGISTRY_TITLE: "HeyCard Crypto Rates Registry"
+      REGISTRY_URL: https://registry:5000
+      DELETE_IMAGES: true
+      SHOW_CONTENT_DIGEST: true
+      CATALOG_ELEMENTS_LIMIT: 1000
+      PULL_URL: 192.168.0.100:5000
+    networks:
+      - registry-network
+    depends_on:
+      - registry
+
+volumes:
+  registry-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/data
+      o: bind
+
+networks:
+  registry-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: registry-br0
