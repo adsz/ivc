@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="3" failures="1" skipped="0" tests="20" time="1.347" timestamp="2025-09-05T01:40:56.746390+02:00" hostname="ol01"><testcase classname="app.test_main.TestCryptoRatesAPI" name="test_api_initialization" time="0.002" /><testcase classname="app.test_main.TestCryptoRatesAPI" name="test_successful_api_call" time="0.001"><error message="failed on setup with &quot;file /repos/devops-lab-new/interview-challenge/app/test_main.py, line 50&#10;      @requests_mock.Mocker()&#10;      def test_successful_api_call(self, m):&#10;E       fixture 'm' not found&#10;&gt;       available fixtures: _xunit_setup_method_fixture_TestCryptoRatesAPI, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, cov, doctest_namespace, extra, extras, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, include_metadata_in_junit_xml, metadata, mock_env, monkeypatch, no_cover, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, requests_mock, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/repos/devops-lab-new/interview-challenge/app/test_main.py:50&quot;">file /repos/devops-lab-new/interview-challenge/app/test_main.py, line 50
+      @requests_mock.Mocker()
+      def test_successful_api_call(self, m):
+E       fixture 'm' not found
+&gt;       available fixtures: _xunit_setup_method_fixture_TestCryptoRatesAPI, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, cov, doctest_namespace, extra, extras, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, include_metadata_in_junit_xml, metadata, mock_env, monkeypatch, no_cover, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, requests_mock, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
+
+/repos/devops-lab-new/interview-challenge/app/test_main.py:50</error></testcase><testcase classname="app.test_main.TestCryptoRatesAPI" name="test_api_timeout" time="0.001"><error message="failed on setup with &quot;file /repos/devops-lab-new/interview-challenge/app/test_main.py, line 69&#10;      @requests_mock.Mocker()&#10;      def test_api_timeout(self, m):&#10;E       fixture 'm' not found&#10;&gt;       available fixtures: _xunit_setup_method_fixture_TestCryptoRatesAPI, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, cov, doctest_namespace, extra, extras, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, include_metadata_in_junit_xml, metadata, mock_env, monkeypatch, no_cover, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, requests_mock, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/repos/devops-lab-new/interview-challenge/app/test_main.py:69&quot;">file /repos/devops-lab-new/interview-challenge/app/test_main.py, line 69
+      @requests_mock.Mocker()
+      def test_api_timeout(self, m):
+E       fixture 'm' not found
+&gt;       available fixtures: _xunit_setup_method_fixture_TestCryptoRatesAPI, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, cov, doctest_namespace, extra, extras, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, include_metadata_in_junit_xml, metadata, mock_env, monkeypatch, no_cover, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, requests_mock, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
+
+/repos/devops-lab-new/interview-challenge/app/test_main.py:69</error></testcase><testcase classname="app.test_main.TestCryptoRatesAPI" name="test_api_error_response" time="0.001"><error message="failed on setup with &quot;file /repos/devops-lab-new/interview-challenge/app/test_main.py, line 82&#10;      @requests_mock.Mocker()&#10;      def test_api_error_response(self, m):&#10;E       fixture 'm' not found&#10;&gt;       available fixtures: _xunit_setup_method_fixture_TestCryptoRatesAPI, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, cov, doctest_namespace, extra, extras, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, include_metadata_in_junit_xml, metadata, mock_env, monkeypatch, no_cover, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, requests_mock, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/repos/devops-lab-new/interview-challenge/app/test_main.py:82&quot;">file /repos/devops-lab-new/interview-challenge/app/test_main.py, line 82
+      @requests_mock.Mocker()
+      def test_api_error_response(self, m):
+E       fixture 'm' not found
+&gt;       available fixtures: _xunit_setup_method_fixture_TestCryptoRatesAPI, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, cov, doctest_namespace, extra, extras, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, include_metadata_in_junit_xml, metadata, mock_env, monkeypatch, no_cover, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, requests_mock, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
+
+/repos/devops-lab-new/interview-challenge/app/test_main.py:82</error></testcase><testcase classname="app.test_main.TestCryptoRatesAPI" name="test_caching_mechanism" time="0.001"><failure message="AttributeError: &lt;main.CryptoRatesAPI object at 0x7f109ece4290&gt; does not have the attribute '_fetch_fresh_data'">self = &lt;test_main.TestCryptoRatesAPI object at 0x7f109ee82330&gt;
+
+    def test_caching_mechanism(self):
+        """Test data caching functionality."""
+&gt;       with patch.object(self.api, '_fetch_fresh_data') as mock_fetch:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+app/test_main.py:96: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/root/.local/share/uv/python/cpython-3.13.1-linux-x86_64-gnu/lib/python3.13/unittest/mock.py:1495: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;unittest.mock._patch object at 0x7f109ee6ff00&gt;
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+&gt;           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: &lt;main.CryptoRatesAPI object at 0x7f109ece4290&gt; does not have the attribute '_fetch_fresh_data'
+
+/root/.local/share/uv/python/cpython-3.13.1-linux-x86_64-gnu/lib/python3.13/unittest/mock.py:1465: AttributeError</failure></testcase><testcase classname="app.test_main.TestCryptoRatesAPI" name="test_data_processing" time="0.001" /><testcase classname="app.test_main.TestCryptoRatesAPI" name="test_invalid_api_response" time="0.002" /><testcase classname="app.test_main.TestFlaskApp" name="test_index_route_success" time="0.044" /><testcase classname="app.test_main.TestFlaskApp" name="test_index_route_api_error" time="0.005" /><testcase classname="app.test_main.TestFlaskApp" name="test_api_rates_endpoint_success" time="0.003" /><testcase classname="app.test_main.TestFlaskApp" name="test_api_rates_endpoint_error" time="0.002" /><testcase classname="app.test_main.TestFlaskApp" name="test_health_check_healthy" time="0.002" /><testcase classname="app.test_main.TestFlaskApp" name="test_health_check_degraded" time="0.002" /><testcase classname="app.test_main.TestFlaskApp" name="test_health_check_exception" time="0.003" /><testcase classname="app.test_main.TestFlaskApp" name="test_metrics_endpoint" time="0.003" /><testcase classname="app.test_main.TestFlaskApp" name="test_404_error_handling" time="0.002" /><testcase classname="app.test_main.TestFlaskApp" name="test_metrics_increment" time="0.169" /><testcase classname="app.test_main.TestIntegration" name="test_full_application_flow" time="0.004" /><testcase classname="app.test_main.TestIntegration" name="test_error_handling_chain" time="0.005" /><testcase classname="app.test_main" name="test_environment_configuration" time="0.003" /></testsuite></testsuites>
