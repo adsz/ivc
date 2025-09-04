@@ -70,19 +70,22 @@ jobs:
       - name: 🧹 Lint with flake8
         run: |
           cd app/
-          uv run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          uv run flake8 . --count --max-complexity=10 --max-line-length=88 --statistics
+          source .venv/bin/activate
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --max-complexity=10 --max-line-length=88 --statistics
           
       - name: 🔒 Security scan with Bandit
         run: |
           cd app/
-          uv run bandit -r . -f json -o bandit-report.json
+          source .venv/bin/activate
+          bandit -r . -f json -o bandit-report.json
         continue-on-error: true
         
       - name: 🛡️ Dependency vulnerability scan
         run: |
           cd app/
-          uv run safety check --json --output safety-report.json
+          source .venv/bin/activate
+          safety check --json --output safety-report.json
         continue-on-error: true
         
       - name: 📊 Upload security reports
@@ -133,7 +136,8 @@ jobs:
       - name: 🧪 Run tests with coverage
         run: |
           cd app/
-          uv run pytest . \
+          source .venv/bin/activate
+          pytest . \
             --cov=. \
             --cov-report=xml:coverage.xml \
             --cov-report=html:htmlcov \
