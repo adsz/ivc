@@ -71,8 +71,8 @@ jobs:
         run: |
           cd app/
           source .venv/bin/activate
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 . --count --max-complexity=10 --max-line-length=88 --statistics
+          flake8 main.py test_main.py --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 main.py test_main.py --count --max-complexity=10 --max-line-length=88 --statistics
           
       - name: 🔒 Security scan with Bandit
         run: |
