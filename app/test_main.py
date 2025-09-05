@@ -6,7 +6,6 @@ Unit tests for HeyCard Cryptocurrency Exchange Rates Application
 import json
 import pytest
 import requests
-import requests_mock
 from unittest.mock import patch
 from main import app, CryptoRatesAPI
 
