@@ -1,5 +1,5 @@
 # Multi-stage Docker build for production-ready container
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 # Set environment variables for Python
 ENV PYTHONDONTWRITEBYTECODE=1 \
