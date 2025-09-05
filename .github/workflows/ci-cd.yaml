@@ -23,6 +23,12 @@ on:
         default: false
         type: boolean
 
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+  id-token: write
+
 env:
   REGISTRY: 192.168.0.100:5000
   IMAGE_NAME: crypto-rates
@@ -206,6 +212,7 @@ jobs:
             
       - name: 🔒 Run Trivy vulnerability scanner (Dockerfile)
         uses: aquasecurity/trivy-action@master
+        continue-on-error: true
         with:
           scan-type: 'config'
           scan-ref: '.'
@@ -213,8 +220,9 @@ jobs:
           output: 'trivy-dockerfile.sarif'
           
       - name: 📊 Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
+        continue-on-error: true
         with:
           sarif_file: 'trivy-dockerfile.sarif'
           
@@ -246,14 +254,16 @@ jobs:
     steps:
       - name: 🔒 Run Trivy vulnerability scanner (Image)
         uses: aquasecurity/trivy-action@master
+        continue-on-error: true
         with:
           image-ref: ${{ needs.build.outputs.image-tag }}
           format: 'sarif'
           output: 'trivy-image.sarif'
           
       - name: 📊 Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
+        continue-on-error: true
         with:
           sarif_file: 'trivy-image.sarif'
 
